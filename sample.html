@@ -1,44 +1,108 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Fetch Excel from URL</title>
+  <title>Excel CRUD Demo</title>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h2>Excel Data from URL</h2>
-  <div id="output"></div>
-
-  <!-- SheetJS CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <h2>Excel Data</h2>
+  <table id="data-table" border="1" cellpadding="5"></table>
+  <br />
+  <button onclick="addRow()">Add Row</button>
+  <button onclick="saveData()">Save to Server</button>
 
   <script>
-    const fileUrl = 'Book1.txt'; // <-- Replace with your file URL
+    const API_URL = 'http://localhost:3000/data'; // Change to your backend URL after deployment
 
-    fetch(fileUrl)
-      .then(response => response.arrayBuffer())
-      .then(data => {
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    let tableData = [];
 
-        const output = document.getElementById('output');
-        output.innerHTML = '<h3>Excel Data:</h3><table border="1" cellpadding="5"></table>';
-        const table = output.querySelector('table');
+    // Fetch Excel data from backend
+    async function fetchData() {
+      const res = await fetch(API_URL);
+      tableData = await res.json();
+      renderTable();
+    }
 
-        jsonData.forEach(row => {
-          const tr = document.createElement('tr');
-          row.forEach(cell => {
-            const td = document.createElement('td');
-            td.textContent = cell;
-            tr.appendChild(td);
-          });
-          table.appendChild(tr);
-        });
-      })
-      .catch(error => {
-        document.getElementById('output').innerHTML = 'Error loading file: ' + error;
+    // Render table from data array
+    function renderTable() {
+      const table = document.getElementById('data-table');
+      table.innerHTML = '';
+      if (tableData.length === 0) {
+        table.innerHTML = '<tr><td>No data</td></tr>';
+        return;
+      }
+      // Header row
+      const headerRow = document.createElement('tr');
+      Object.keys(tableData[0]).forEach(key => {
+        const th = document.createElement('th');
+        th.textContent = key;
+        headerRow.appendChild(th);
       });
+      headerRow.appendChild(document.createElement('th')); // Actions column
+      table.appendChild(headerRow);
+
+      // Data rows
+      tableData.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        Object.values(row).forEach(value => {
+          const td = document.createElement('td');
+          td.contentEditable = true;
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+        // Delete button
+        const actionTd = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => {
+          tableData.splice(i, 1);
+          renderTable();
+        };
+        actionTd.appendChild(delBtn);
+        tr.appendChild(actionTd);
+        table.appendChild(tr);
+      });
+    }
+
+    // Add empty row
+    function addRow() {
+      if (tableData.length === 0) {
+        tableData.push({ id: '', name: '', age: '' });
+      } else {
+        const keys = Object.keys(tableData[0]);
+        const newRow = {};
+        keys.forEach(k => newRow[k] = '');
+        tableData.push(newRow);
+      }
+      renderTable();
+    }
+
+    // Save edited data back to server
+    async function saveData() {
+      // Collect updated data from table
+      const table = document.getElementById('data-table');
+      const rows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip header
+      const keys = Object.keys(tableData[0]);
+      tableData = rows.map(tr => {
+        const cells = tr.querySelectorAll('td');
+        const obj = {};
+        keys.forEach((k, i) => {
+          obj[k] = cells[i].textContent.trim();
+        });
+        return obj;
+      });
+
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tableData),
+      });
+      const result = await res.json();
+      alert(result.message || 'Saved');
+      fetchData();
+    }
+
+    fetchData();
   </script>
 </body>
 </html>
