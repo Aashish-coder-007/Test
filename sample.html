@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Fetch Excel from URL</title>
+</head>
+<body>
+  <h2>Excel Data from URL</h2>
+  <div id="output"></div>
+
+  <!-- SheetJS CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    const fileUrl = 'Book1.xlsx'; // <-- Replace with your file URL
+
+    fetch(fileUrl)
+      .then(response => response.arrayBuffer())
+      .then(data => {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        const output = document.getElementById('output');
+        output.innerHTML = '<h3>Excel Data:</h3><table border="1" cellpadding="5"></table>';
+        const table = output.querySelector('table');
+
+        jsonData.forEach(row => {
+          const tr = document.createElement('tr');
+          row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+      })
+      .catch(error => {
+        document.getElementById('output').innerHTML = 'Error loading file: ' + error;
+      });
+  </script>
+</body>
+</html>
