@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // For parsing JSON request bodies
 
-const EXCEL_FILE = './data.xlsx';
+const EXCEL_FILE = 'https://test-c25u.onrender.com/data';
 
 // Helper: Read Excel file and convert to JSON
 function readExcel() {
